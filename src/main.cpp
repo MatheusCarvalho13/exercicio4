@@ -45,10 +45,19 @@ public:
 
     void iniciar_rodada() {
         // TODO: Inicia uma nova rodada, removendo uma cadeira e ressincronizando o semáforo
+        
+        cadeira_sem.release(cadeiras-1);
+        
+        
     }
 
     void parar_musica() {
         // TODO: Simula o momento em que a música para e notifica os jogadores via variável de condição
+        
+        int tempo = std::rand() % 100;
+        std::this_thread::sleep_for(std::chrono::seconds(tempo));
+        musica_parada = true;
+        music_cv.notifyall();  
     }
 
     void eliminar_jogador(int jogador_id) {
