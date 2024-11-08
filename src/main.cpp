@@ -57,7 +57,7 @@ public:
         int tempo = std::rand() % 100;
         std::this_thread::sleep_for(std::chrono::seconds(tempo));
         musica_parada = true;
-        music_cv.notifyall();  
+        music_cv = music_cv.notifyall();
     }
 
     void eliminar_jogador(int jogador_id) {
