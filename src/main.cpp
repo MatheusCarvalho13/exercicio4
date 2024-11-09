@@ -61,15 +61,25 @@ public:
     void eliminar_jogador(int jogador_id) {
         // TODO: Elimina um jogador que não conseguiu uma cadeira
         std::cout << "Jogador" << jogador_id << "  esta eliminado"; 
+        num_jogadores = num_jogadores - 1;
     }
 
     void exibir_estado() {
         // TODO: Exibe o estado atual das cadeiras e dos jogadores
     }
 
+    void finalizar_jogo() {
+        if(num_jogadores > 1) {
+            jogo_ativo = true; // intrucao atomica
+        }
+        else{
+            jogo_ativo = false;  // instrucao atomica  
+    }}    
+
 private:
     int num_jogadores;
     int cadeiras;
+
 };
 
 class Jogador {
@@ -85,6 +95,8 @@ public:
         if (cadeira_sem.try_acquire()) {  //instrucao atomica, nao blocante 
             std::cout << "Jogador " << id << " conseguiu uma cadeira!" << std::endl;
             eliminado = false;
+
+            
         } else {
             verificar_eliminacao();  // Caso contrário, verifica eliminação
         }
@@ -105,7 +117,7 @@ public:
         
         std::unique_lock<std::mutex> lock(music_mutex);
         //music_cv.wait(lock, [] { return musica_parada; }) 
-
+        
         while(!musica_parada) {
             music_cv.wait(lock);
         }
@@ -113,11 +125,16 @@ public:
         // TODO: Tenta ocupar uma cadeira 
         // TODO: Verifica se foi eliminado
         tentar_ocupar_cadeira();
-     
+
+    
         
         if(eliminado){
             break;}  // encerra a thread do jogador eliminado
-        }}
+        }
+
+        jogo.inicia_rodada(); // desliga a musica e retira uma cadeira
+        
+    }
 
 private:
     int id;
@@ -134,11 +151,15 @@ public:
         // TODO: Começa o jogo, dorme por um período aleatório, e então para a música, sinalizando os jogadores
         
         while (jogo_ativo){
-        jogo.iniciar_rodada();
+        
+        // O JOGADOR inicia uma nova rodada
         int tempo = rand()%10;
         std::this_thread::sleep_for(std::chrono::seconds(tempo));
         jogo.parar_musica();
         std::this_thread::sleep_for(std::chrono::seconds(tempo)); //espera um tempo para os jogadores sentarem
+        jogo.iniciar_rodada();
+        jogo.finalizar_jogo(); // verifica se o jogo acabou alterando (instrucao atomica) a variavel jogo_ativo
+            
     
     }}}
 
