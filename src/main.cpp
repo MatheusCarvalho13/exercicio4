@@ -40,7 +40,7 @@ std::atomic<bool> jogo_ativo{true};
 // Classes
 class JogoDasCadeiras {
 public:
-    JogoDasCadeiras(int num_jogadores, &Jogadores jogadores_obj)
+    JogoDasCadeiras(int num_jogadores, std::vector<Jogador>& jogadores_obj)
         : num_jogadores(num_jogadores), cadeiras(num_jogadores - 1), jogadores_obj(jogadores_obj) {}
 
     void iniciar_rodada() {
@@ -56,7 +56,7 @@ public:
     void parar_musica() {
         // TODO: Simula o momento em que a música para e notifica os jogadores via variável de condição
         musica_parada = true;
-        music_cv.notifyall();
+        music_cv.notify_all();
     }
 
     void eliminar_jogador(int jogador_id) { //elimina o jogador da lista
@@ -82,12 +82,12 @@ public:
         }
         else{
             jogo_ativo = false;  // instrucao atomica  
-    }}    
+        }}    
 
 private:
     int num_jogadores;
     int cadeiras;
-    std::vector<Jogador> jogadores_objs;
+    std::vector<Jogador> jogadores_obj;
 };
 
 class Jogador {
@@ -171,10 +171,8 @@ public:
         jogo.iniciar_rodada();
         jogo.finalizar_jogo(); // verifica se o jogo acabou alterando (instrucao atomica) a variavel jogo_ativo
         if(jogo_ativo == false) {
-             std::cout << "o jogo acabou"   
+             std::cout << "o jogo acabou"; 
         }
-
-        jogo.
     
     }}}
 
@@ -185,6 +183,9 @@ private:
 // Main function
 int main() {
 
+    Coordenador coordenador(jogo);
+    std::vector<std::thread> jogadores;
+
 
     // Criação das threads dos jogadores
     std::vector<Jogador> jogadores_objs;
@@ -193,9 +194,7 @@ int main() {
     }
 
     JogoDasCadeiras jogo(NUM_JOGADORES, jogadores_objs);
-    Coordenador coordenador(jogo);
-    std::vector<std::thread> jogadores;
-
+    
     for (int i = 0; i < NUM_JOGADORES; ++i) {
         jogadores.emplace_back(&Jogador::joga, &jogadores_objs[i]);
     }
