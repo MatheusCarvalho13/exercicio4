@@ -40,14 +40,15 @@ std::atomic<bool> jogo_ativo{true};
 // Classes
 class JogoDasCadeiras {
 public:
-    JogoDasCadeiras(int num_jogadores)
-        : num_jogadores(num_jogadores), cadeiras(num_jogadores - 1) {}
+    JogoDasCadeiras(int num_jogadores, &Jogadores jogadores_obj)
+        : num_jogadores(num_jogadores), cadeiras(num_jogadores - 1), jogadores_obj(jogadores_obj) {}
 
     void iniciar_rodada() {
         // TODO: Inicia uma nova rodada, removendo uma cadeira e ressincronizando o semáforo
 
         musica_parada  = false;  // musica tocando...
         cadeira_sem.release(num_jogadores-1);
+        music_cv.notify_all(); // notifica as threads que a musica esta tocando para que elas se preparem para uma nova rodada
 
     
     }
@@ -58,14 +59,21 @@ public:
         music_cv.notifyall();
     }
 
-    void eliminar_jogador(int jogador_id) {
-        // TODO: Elimina um jogador que não conseguiu uma cadeira
-        std::cout << "Jogador" << jogador_id << "  esta eliminado"; 
-        num_jogadores = num_jogadores - 1;
+    void eliminar_jogador(int jogador_id) { //elimina o jogador da lista
+        auto it = std::find_if(jogadores.begin(), jogadores.end(), 
+                               [jogador_id](const Jogador& jogador) { return jogador.get_id() == jogador_id; });
+        if (it != jogadores.end()) {
+            std::cout << "Jogador " << jogador_id << " foi eliminado!" << std::endl;
+            jogadores.erase(it); // Remove o jogador da lista
+            num_jogadores--;
+            cadeiras = num_jogadores - 1;
+        }
     }
 
     void exibir_estado() {
-        // TODO: Exibe o estado atual das cadeiras e dos jogadores
+        // TODO: Exibe o estado atual dos jogadores
+        // imprimir o ID de todos os jogadores que conseguiram sentar (que nao ficaram travados no semaforo)
+        
     }
 
     void finalizar_jogo() {
@@ -79,7 +87,7 @@ public:
 private:
     int num_jogadores;
     int cadeiras;
-
+    std::vector<Jogador> jogadores_objs;
 };
 
 class Jogador {
@@ -126,15 +134,18 @@ public:
         // TODO: Verifica se foi eliminado
         tentar_ocupar_cadeira();
 
-    
+        
         
         if(eliminado){
             break;}  // encerra a thread do jogador eliminado
         }
 
-        jogo.inicia_rodada(); // desliga a musica e retira uma cadeira
-        
-    }
+        while(musica_parada) { // espera a musica parar para comecar mais uma etapa do jogo
+            music_cv.wait(lock);
+        }}
+
+
+    int get_id() const { return id; }
 
 private:
     int id;
@@ -159,7 +170,11 @@ public:
         std::this_thread::sleep_for(std::chrono::seconds(tempo)); //espera um tempo para os jogadores sentarem
         jogo.iniciar_rodada();
         jogo.finalizar_jogo(); // verifica se o jogo acabou alterando (instrucao atomica) a variavel jogo_ativo
-            
+        if(jogo_ativo == false) {
+             std::cout << "o jogo acabou"   
+        }
+
+        jogo.
     
     }}}
 
@@ -169,15 +184,17 @@ private:
 
 // Main function
 int main() {
-    JogoDasCadeiras jogo(NUM_JOGADORES);
-    Coordenador coordenador(jogo);
-    std::vector<std::thread> jogadores;
+
 
     // Criação das threads dos jogadores
     std::vector<Jogador> jogadores_objs;
     for (int i = 1; i <= NUM_JOGADORES; ++i) {
         jogadores_objs.emplace_back(i, jogo);
     }
+
+    JogoDasCadeiras jogo(NUM_JOGADORES, jogadores_objs);
+    Coordenador coordenador(jogo);
+    std::vector<std::thread> jogadores;
 
     for (int i = 0; i < NUM_JOGADORES; ++i) {
         jogadores.emplace_back(&Jogador::joga, &jogadores_objs[i]);
